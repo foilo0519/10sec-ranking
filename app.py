@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify, render_template_string
+from flask_cors import CORS
 import sqlite3
 import datetime
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 # -------------------------------
 # DB 초기화
@@ -63,12 +65,12 @@ ranking_html = """
 <meta charset="UTF-8">
 <title>10초 게임 랭킹</title>
 <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px; text-align: center; }
-    h1 { margin-bottom: 20px; }
-    table { width: 80%; margin: auto; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    th, td { padding: 12px; border-bottom: 1px solid #ddd; font-size: 18px; }
-    th { background: #3b82f6; color: white; }
-    tr:nth-child(even) { background: #f0f7ff; }
+body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px; text-align: center; }
+h1 { margin-bottom: 20px; }
+table { width: 80%; margin: auto; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+th, td { padding: 12px; border-bottom: 1px solid #ddd; font-size: 18px; }
+th { background: #3b82f6; color: white; }
+tr:nth-child(even) { background: #f0f7ff; }
 </style>
 </head>
 <body>
@@ -111,11 +113,37 @@ def ranking():
     return render_template_string(ranking_html, records=rows)
 
 # -------------------------------
-# 홈페이지 안내
+# TOP20 JSON 조회 API
+# -------------------------------
+@app.get("/api/get_top20")
+def get_top20():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM records
+        ORDER BY diff ASC
+        LIMIT 20
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    # JSON 형식으로 반환
+    result = []
+    for r in rows:
+        result.append({
+            "school": r[1],
+            "name": r[2],
+            "record": r[3],
+            "diff": r[4],
+            "created_at": r[5]
+        })
+    return jsonify(result), 200
+
+# -------------------------------
+# 홈 페이지
 # -------------------------------
 @app.get("/")
 def home():
-    return "<h2>10초 게임 서버가 실행 중입니다. /ranking 에서 랭킹 확인 가능</h2>"
+    return "<h2>10초 게임 서버 작동 중! /ranking 에서 TOP20 랭킹 확인</h2>"
 
 # -------------------------------
 if __name__ == "__main__":
