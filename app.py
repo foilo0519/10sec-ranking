@@ -44,6 +44,10 @@ def save_record():
     if not school or not name or record is None or diff is None:
         return jsonify({"error": "Invalid data"}), 400
 
+    # 이름란에 '초기화' 입력 시 랭킹 초기화
+    if name.strip() == "초기화":
+        return reset_records()
+
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     cur.execute("""
@@ -54,6 +58,21 @@ def save_record():
     conn.close()
 
     return jsonify({"message": "Record saved!"}), 200
+
+# -------------------------------
+# 랭킹 초기화 API
+# -------------------------------
+@app.post("/api/reset_records")
+def reset_records():
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
+        cur.execute("DELETE FROM records")
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "랭킹 초기화 완료!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # -------------------------------
 # 랭킹 페이지 (TOP 20)
@@ -126,7 +145,6 @@ def get_top20():
     """)
     rows = cur.fetchall()
     conn.close()
-    # JSON 형식으로 반환
     result = []
     for r in rows:
         result.append({
