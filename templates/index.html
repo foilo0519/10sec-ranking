@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>10초 게임 랭킹</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 30px;
+        }
+        table {
+            width: 70%;
+            margin: 30px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 10px;
+            background: white;
+        }
+        th {
+            background: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>10초 게임 랭킹 TOP 20</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>순위</th>
+                <th>학교</th>
+                <th>이름</th>
+                <th>기록(초)</th>
+                <th>오차(초)</th>
+            </tr>
+        </thead>
+        <tbody id="ranking">
+        </tbody>
+    </table>
+
+    <script>
+        async function loadRanking() {
+            let res = await fetch("/api/get_top20");
+            let data = await res.json();
+
+            let tbody = document.getElementById("ranking");
+            tbody.innerHTML = "";
+
+            data.forEach((item, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.school}</td>
+                        <td>${item.name}</td>
+                        <td>${item.record.toFixed(3)}</td>
+                        <td>${item.diff.toFixed(3)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        loadRanking();
+        setInterval(loadRanking, 3000); // 3초마다 자동 새로고침
+    </script>
+</body>
+</html>
