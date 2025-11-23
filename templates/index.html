@@ -2,40 +2,51 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>기록 전송</title>
+<title>10초 게임 랭킹</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 40px; text-align: center; }
+h1 { margin-bottom: 20px; }
+table { width: 80%; margin: auto; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+th, td { padding: 12px; border-bottom: 1px solid #ddd; font-size: 18px; }
+th { background: #3b82f6; color: white; }
+tr:nth-child(even) { background: #f0f7ff; }
+</style>
 </head>
 <body>
-
-<h2>이름과 시간 입력</h2>
-
-<label>이름:</label>
-<input type="text" id="name"><br><br>
-
-<label>시간(초):</label>
-<input type="number" id="time"><br><br>
-
-<button onclick="sendData()">전송하기</button>
+<h1>10초 맞추기 게임 랭킹 TOP 20</h1>
+<table>
+<tr>
+<th>순위</th>
+<th>학교</th>
+<th>이름</th>
+<th>기록(초)</th>
+<th>오차(초)</th>
+<th>날짜</th>
+</tr>
+<tbody id="ranking"></tbody>
+</table>
 
 <script>
-function sendData() {
-    const name = document.getElementById("name").value;
-    const time = document.getElementById("time").value;
-
-    fetch("https://one0sec-ranking.onrender.com/ranking", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            name: name,
-            time: time
-        })
-    })
-    .then(res => res.json())
-    .then(data => alert("전송 완료!"))
-    .catch(err => alert("전송 실패"));
+async function loadRanking() {
+    const res = await fetch("/api/get_top20");
+    const data = await res.json();
+    const tbody = document.getElementById("ranking");
+    tbody.innerHTML = "";
+    data.forEach((item, index) => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${item.school}</td>
+                <td>${item.name}</td>
+                <td>${item.record.toFixed(3)}</td>
+                <td>${item.diff.toFixed(3)}</td>
+                <td>${item.created_at.slice(0,10)}</td>
+            </tr>
+        `;
+    });
 }
+loadRanking();
+setInterval(loadRanking, 3000);
 </script>
-
 </body>
 </html>
