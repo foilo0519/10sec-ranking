@@ -1,116 +1,41 @@
-from flask import Flask, request, jsonify, send_from_directory
-import sqlite3
-import datetime
+from flask import Flask, request, jsonify
+import csv
 import os
+from datetime import datetime
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
 
-DB_FILE = "records.db"
+CSV_FILE = "rank.csv"
 
-
-# -------------------------------
-# DB 초기화 (school 컬럼 없이)
-# -------------------------------
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-
-    # 테이블 생성 (school 제거됨)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            record REAL NOT NULL,
-            diff REAL NOT NULL,
-            created_at TEXT NOT NULL
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+# CSV 파일 없으면 생성 (school 제거 버전)
+if not os.path.exists(CSV_FILE):
+    with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["timestamp", "name", "time"])
 
 
-init_db()
+@app.route("/", methods=["GET"])
+def home():
+    return "Ranking server is running."
 
 
-# -------------------------------
-# 기록 저장 API
-# -------------------------------
-@app.post("/api/save_record")
-def save_record():
-    data = request.get_json()
-
-    name = data.get("name")
-    record = data.get("record")
-    diff = data.get("diff")
-
-    # 기본 검증
-    if not name or record is None or diff is None:
-        return jsonify({"error": "Invalid data"}), 400
-
-    # 이름란에 '초기화' 입력 시 랭킹 초기화
-    if name.strip() == "초기화":
-        return reset_records()
-
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO records (name, record, diff, created_at)
-        VALUES (?, ?, ?, ?)
-    """, (name, record, diff, datetime.datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"message": "Record saved!"}), 200
-
-
-# -------------------------------
-# 기록 초기화 API
-# -------------------------------
-@app.post("/api/reset")
-def reset_records():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("DELETE FROM records")
-    conn.commit()
-    conn.close()
-    return jsonify({"message": "All records cleared!"})
-
-
-# -------------------------------
-# 랭킹 조회 API
-# -------------------------------
-@app.get("/api/ranking")
+@app.route("/ranking", methods=["POST"])
 def ranking():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT name, record, diff, created_at
-        FROM records
-        ORDER BY diff ASC
-    """)
-    rows = cur.fetchall()
-    conn.close()
+    data = request.json
+    name = data.get("name")
+    time = data.get("time")
 
-    result = []
-    for r in rows:
-        result.append({
-            "name": r[0],
-            "record": r[1],
-            "diff": r[2],
-            "created_at": r[3]
-        })
+    if not name or not time:
+        return jsonify({"status": "error", "message": "Missing name or time"}), 400
 
-    return jsonify(result)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([timestamp, name, time])
 
-# -------------------------------
-# index.html 서비스
-# -------------------------------
-@app.get("/")
-def index():
-    return send_from_directory("static", "index.html")
+    return jsonify({"status": "success"}), 200
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=10000)
